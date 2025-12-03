@@ -9,7 +9,7 @@ export class AiService {
 
   async getFootballAnswer(question: string): Promise<string> {
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are a football analysis assistant.' },
         { role: 'user', content: question },
