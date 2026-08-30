@@ -4,7 +4,18 @@
 
 import { useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = (
+	process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+).replace(/\/$/, '');
+
+type FootballChatResponse = {
+	answer: string;
+};
+
+type ApiErrorResponse = {
+	message?: string | string[];
+	error?: string;
+};
 
 export default function AiPage() {
 	const [question, setQuestion] = useState('');
@@ -27,14 +38,30 @@ export default function AiPage() {
 				body: JSON.stringify({ question }),
 			});
 
+			const data = (await res.json().catch(() => null)) as
+				| FootballChatResponse
+				| ApiErrorResponse
+				| null;
+
 			if (!res.ok) {
-				throw new Error(`Server error: ${res.status}`);
+				const apiError = data as ApiErrorResponse | null;
+				const message = Array.isArray(apiError?.message)
+					? apiError.message.join(', ')
+					: apiError?.message || apiError?.error || res.statusText;
+				throw new Error(`Request failed (${res.status}): ${message}`);
 			}
 
-			const data = await res.json();
-			setAnswer(data.answer);
-		} catch (err: any) {
-			setError(err.message || 'Something went wrong');
+			if (!data || typeof (data as FootballChatResponse).answer !== 'string') {
+				throw new Error('The API returned an invalid response (missing answer).');
+			}
+
+			setAnswer((data as FootballChatResponse).answer);
+		} catch (err: unknown) {
+			setError(
+				err instanceof Error
+					? err.message
+					: 'The request failed for an unknown reason.',
+			);
 		} finally {
 			setLoading(false);
 		}
